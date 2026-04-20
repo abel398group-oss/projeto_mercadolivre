@@ -1,0 +1,111 @@
+================================================================================
+  Z — EXECUÇÃO (comandos principais do projeto)
+  Texto simples para consulta rápida
+================================================================================
+
+O QUE É ISTO
+------------
+Este projeto coleta dados do Mercado Livre: catálogo (listagens) e detalhes
+de produto (PDP). Os "executores" são comandos que corres no terminal, dentro
+da pasta do projeto, começando por: npm run NOME_DO_COMANDO
+
+
+COMANDOS MAIS USADOS
+--------------------
+(Lê primeiro o bloco em destaque — é o fluxo principal recomendado para ir
+ descobrindo e fazendo PDP em paralelo.)
+
+
+################################################################################
+##                                                                            ##
+##  >>>  1) PRINCIPAL — npm run pipeline  <<<                                 ##
+##                                                                            ##
+##      Modo paralelo: vai descobrindo produtos e já vai fazendo PDP à        ##
+##      medida que aparecem (fila em ficheiros .jsonl em output/).            ##
+##                                                                            ##
+##      Comando:  npm run pipeline                                            ##
+##                                                                            ##
+##      Útil quando NÃO queres esperar o catálogo inteiro acabar antes do      ##
+##      PDP. Requer perceber filas/offset (nomes tipo pipeline_* no output/). ##
+##                                                                            ##
+################################################################################
+
+
+2) npm run catalog
+   - O que faz: gera/atualiza o catálogo (listagem de produtos com URLs, etc.).
+   - Ficheiro típico: output/catalogo_ml.json
+   - Também pode gerar: output/catalogo_ml_lean.json (versão mais leve).
+   - Pode demorar muito (muitas categorias/páginas).
+
+3) npm run ml:pdp:bulk
+   - O que faz: lê o catálogo e abre cada PDP no browser para enriquecer dados.
+   - Precisa de um catalogo_ml.json já existente (gera antes com catalog).
+   - Ficheiro típico: output/pdp_all.json
+   - Também atualiza: pdp_all_lean.json, pdp_debug_lean.json, metrics.json
+     (conforme configuração).
+
+4) npm run catalog && npm run ml:pdp:bulk
+   - O que faz: PRIMEIRO corre o catálogo até acabar; DEPOIS corre o bulk PDP.
+   - O segundo só arranca se o primeiro terminar sem erro.
+   - Use quando quiser o fluxo completo "catálogo fechado → depois PDP".
+
+5) npm run ml:pdp:lean
+   - O que faz: lê o pdp_all.json que já tens e gera/atualiza só o ficheiro
+     LEVE (pdp_all_lean.json), sem voltar a abrir o site.
+
+6) npm run ml:pdp:debug
+   - O que faz: lê o pdp_all.json e gera/atualiza o debug enxuto
+     (pdp_debug_lean.json) — só conflitos/rejeições sanitizados.
+
+7) npm run analyze
+   - O que faz: análise sobre um JSON agregado de PDP (caminhos no .env ou
+     valores por defeito em output/).
+
+8) npm start   ou   npm run ml:pdp
+   - O que faz: teste de UM produto (PDP único), útil para depuração.
+
+
+FICHEIROS "LATEST" (sempre os mais recentes)
+---------------------------------------------
+  output/catalogo_ml.json
+  output/catalogo_ml_lean.json
+  output/pdp_all.json
+  output/pdp_all_lean.json
+  output/pdp_debug_lean.json
+  output/metrics.json
+
+Cada nova execução que grave estes caminhos SUBSTITUI o ficheiro anterior.
+
+
+HISTÓRICO OPCIONAL (cópias com data e hora)
+-------------------------------------------
+Se definires no ambiente: SAVE_HISTORY_OUTPUTS=true
+( e opcionalmente SAVE_HISTORY_ROOT=./output/history )
+o projeto também grava cópias em pastas como:
+  output/history/catalog
+  output/history/pdp
+  output/history/debug
+  output/history/metrics
+
+Se SAVE_HISTORY_OUTPUTS estiver desligado (por defeito), só existem os
+ficheiros "latest" acima.
+
+
+DÚVIDAS COMUNS
+--------------
+
+- Por que não correr catalog e bulk ao mesmo tempo em dois terminais?
+  Porque o bulk lê o catalogo_ml.json no início; se o catálogo ainda estiver
+  a meio, o resultado pode ficar incompleto ou errado. Ou catalog primeiro e
+  bulk depois, ou usa npm run pipeline.
+
+- O que é "lean"?
+  Versão do mesmo dado com menos campos — ficheiros menores para uso normal.
+
+- Onde mudo caminhos e opções?
+  Muitas opções vêm do ficheiro .env e de variáveis documentadas em src/config.js
+
+
+================================================================================
+  Fim. Atualiza este ficheiro se acrescentares novos scripts ao package.json.
+================================================================================
