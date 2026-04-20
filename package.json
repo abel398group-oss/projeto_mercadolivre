@@ -1,0 +1,31 @@
+{
+  "name": "projeto-mercadolivre",
+  "version": "0.1.0",
+  "description": "Scraper Mercado Livre (PDP JSON-LD; listagem em fases seguintes)",
+  "type": "module",
+  "main": "src/runMlPdpTest.js",
+  "scripts": {
+    "start": "node src/runMlPdpTest.js",
+    "start:open": "node src/runMlPdpTest.js --keep-open",
+    "ml:pdp": "node src/runMlPdpTest.js",
+    "ml:pdp:open": "node src/runMlPdpTest.js --keep-open",
+    "catalog": "node src/runMlCatalog.js",
+    "pipeline": "node src/runPipeline.js",
+    "catalog:pdp": "node src/runMlPdpBulk.js",
+    "ml:pdp:bulk": "node src/runMlPdpBulk.js",
+    "ml:pdp:lean": "node src/runMlPdpLeanExport.js",
+    "ml:pdp:debug": "node src/runMlPdpDebugExport.js",
+    "test:embedded": "node src/ml/mlEmbeddedStateExtract.spec.js",
+    "analyze": "node src/runMlAnalyze.js",
+    "ml:analyze": "node src/runMlAnalyze.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "puppeteer": "^23.11.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}
