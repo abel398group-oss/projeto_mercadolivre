@@ -16,6 +16,7 @@ import { appendJsonlLine } from '../io/jsonl.js';
 import { sleep } from '../util.js';
 import { dedupePrimaryKey } from './mlDedupe.js';
 import { writePdpDebugLeanFromPayload } from './mlPdpDebugLean.js';
+import { writePdpCoreFromPayload } from './mlPdpCore.js';
 import { writePdpLeanFromPayload } from './mlPdpLean.js';
 import { getPipelineSharedBrowser, isPipelineSharedBrowser } from './mlPipelineBrowser.js';
 import { pipelineShutdownRequested } from './mlPipelineQueue.js';
@@ -298,6 +299,9 @@ export async function runPipelineConsumer(state) {
     if (outPath) console.info(`[pipeline] gravado (${reason}): ${outPath}`);
     await writePdpLeanFromPayload(/** @type {*} */ (payload)).catch((e) =>
       console.error('[ml-pdp-lean]', e instanceof Error ? e.message : e)
+    );
+    await writePdpCoreFromPayload(/** @type {*} */ (payload)).catch((e) =>
+      console.error('[ml-pdp-core]', e instanceof Error ? e.message : e)
     );
     await writePdpDebugLeanFromPayload(/** @type {*} */ (payload)).catch((e) =>
       console.error('[ml-pdp-debug-lean]', e instanceof Error ? e.message : e)

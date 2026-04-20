@@ -134,6 +134,14 @@ export const config = {
     return (v && String(v).trim()) || './output/pdp_all_lean.json';
   })(),
   /**
+   * PDP camada mínima operacional (paralelo a pdp_all_lean “rico”). Desliga: ML_PDP_CORE_OUTPUT=- ou none
+   */
+  mlPdpCoreOutput: (() => {
+    const v = process.env.ML_PDP_CORE_OUTPUT;
+    if (v === '-' || String(v || '').toLowerCase() === 'none') return '';
+    return (v && String(v).trim()) || './output/pdp_all_core.json';
+  })(),
+  /**
    * PDP debug enxuto (conflitos/rejeições sanitizados). Desliga: ML_PDP_DEBUG_LEAN_OUTPUT=- ou none
    */
   mlPdpDebugLeanOutput: (() => {

@@ -106,6 +106,7 @@ export async function writeRunManifest(opts) {
       catalog: outputPathDisplay(config.mlCatalogOutput),
       catalog_lean: outputPathDisplay(config.mlCatalogLeanOutput),
       pdp: outputPathDisplay(config.mlBulkOutput),
+      pdp_core: outputPathDisplay(config.mlPdpCoreOutput),
       pdp_lean: outputPathDisplay(config.mlPdpLeanOutput),
       pdp_debug: outputPathDisplay(config.mlPdpDebugLeanOutput),
       metrics: outputPathDisplay(config.mlMetricsOutput),

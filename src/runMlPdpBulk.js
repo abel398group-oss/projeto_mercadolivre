@@ -3,7 +3,8 @@
  *
  * Saída por defeito (pasta `output/` enxuta):
  * - **Agregado**: `ML_BULK_OUTPUT` → `./output/pdp_all.json`
- * - **Lean**: `ML_PDP_LEAN_OUTPUT` → `./output/pdp_all_lean.json` (flush)
+ * - **Core (mínimo)**: `ML_PDP_CORE_OUTPUT` → `./output/pdp_all_core.json` (flush)
+ * - **Lean (rico)**: `ML_PDP_LEAN_OUTPUT` → `./output/pdp_all_lean.json` (flush)
  * - **Debug lean**: `ML_PDP_DEBUG_LEAN_OUTPUT` → `./output/pdp_debug_lean.json` (só itens com conflitos/rejeições)
  * - **Métricas**: `ML_METRICS_OUTPUT` → `./output/metrics.json` (atualizado em cada flush e no fim; parcial em SIGINT)
  * - **Histórico opcional**: `SAVE_HISTORY_OUTPUTS=true` grava cópias com timestamp em `./output/history/{catalog,pdp,debug,metrics}/`
@@ -233,6 +234,9 @@ async function main() {
     }
     await writePdpLeanFromPayload(/** @type {*} */ (payload)).catch((e) =>
       console.error('[ml-pdp-lean]', e instanceof Error ? e.message : e)
+    );
+    await writePdpCoreFromPayload(/** @type {*} */ (payload)).catch((e) =>
+      console.error('[ml-pdp-core]', e instanceof Error ? e.message : e)
     );
     await writePdpDebugLeanFromPayload(/** @type {*} */ (payload)).catch((e) =>
       console.error('[ml-pdp-debug-lean]', e instanceof Error ? e.message : e)

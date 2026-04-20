@@ -78,6 +78,7 @@ FICHEIROS "LATEST" — SNAPSHOTS / EXPORT DERIVADOS (.json)
   output/catalogo_ml.json
   output/catalogo_ml_lean.json
   output/pdp_all.json
+  output/pdp_all_core.json        (camada mínima; ver também pdp_all_lean.json “rico”)
   output/pdp_all_lean.json
   output/pdp_debug_lean.json
   output/metrics.json
