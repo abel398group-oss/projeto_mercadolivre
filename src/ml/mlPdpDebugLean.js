@@ -120,7 +120,9 @@ function buildDebugLeanItem(product) {
   const rejections = Array.isArray(product._field_rejections) ? product._field_rejections : [];
   return {
     product_id: str(product.product_id) || undefined,
+    listing_product_id: str(product.listing_product_id) || undefined,
     item_id: str(product.item_id) || undefined,
+    canonical_id: str(product.canonical_id) || undefined,
     name: shortLabel(product.name, 200),
     url: shortLabel(product.url),
     _source_conflicts: conflicts.map((c) => sanitizeConflict(c)),
@@ -142,7 +144,11 @@ export function buildPdpDebugLeanSnapshot(fullPayload) {
     if (conflicts.length === 0 && rejections.length === 0) continue;
     outItems[k] = buildDebugLeanItem(rec);
   }
-  return { meta, items: outItems };
+  return {
+    schema_version: 'pdp_debug_lean_v1',
+    meta,
+    items: outItems,
+  };
 }
 
 /**

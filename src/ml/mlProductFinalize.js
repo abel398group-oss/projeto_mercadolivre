@@ -66,7 +66,21 @@ export function buildCanonicalUrl(product) {
 }
 
 /**
- * `product_id` legado = item_id || catalog_product_id (único campo agregado para CSVs antigos).
+ * ID oficial para downstream: item → catálogo MLBU → listagem → legado product_id.
+ * @param {import('../productSchema.js').CanonicalProduct | Record<string, unknown>} p
+ * @returns {string}
+ */
+export function computeCanonicalProductId(p) {
+  const item = str(p?.item_id);
+  const cat = str(p?.catalog_product_id);
+  const listing = str(p?.listing_product_id);
+  const legacy = str(p?.product_id);
+  return item || cat || listing || legacy;
+}
+
+/**
+ * `product_id` legado = item_id || catalog_product_id || product_id (compatível com código existente).
+ * `canonical_id` = mesma prioridade, incluindo listing_product_id antes do legado.
  * @param {import('../productSchema.js').CanonicalProduct} p
  * @returns {import('../productSchema.js').CanonicalProduct}
  */
@@ -74,7 +88,11 @@ export function finalizeCollectionRecord(p) {
   const out = { ...emptyProduct(), ...p };
   const item = str(out.item_id);
   const cat = str(out.catalog_product_id);
-  out.product_id = item || cat || str(out.product_id);
+  const listing = str(out.listing_product_id);
+  const preservedLegacy = str(out.product_id);
+
+  out.product_id = item || cat || preservedLegacy;
+  out.canonical_id = item || cat || listing || preservedLegacy;
   return /** @type {import('../productSchema.js').CanonicalProduct} */ (out);
 }
 

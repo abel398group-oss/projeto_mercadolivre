@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { launchBrowser } from './browser.js';
+import { launchBrowser, logChromePersistentProfileSummary } from './browser.js';
 import { config } from './config.js';
 import { scrapeMlPdp } from './ml/mlPdpScrape.js';
 
@@ -19,6 +19,8 @@ if (!url) {
 console.warn(
   '[ml-pdp] Modo: um anúncio por execução (só esta URL). Para PDP de todos os itens: npm run catalog → npm run catalog:pdp'
 );
+
+logChromePersistentProfileSummary('[ml-pdp]');
 
 /** @type {import('puppeteer').Browser | undefined} */
 let browser;

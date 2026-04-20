@@ -13,7 +13,9 @@ import { sleep } from '../util.js';
 import { dedupePrimaryKey } from './mlDedupe.js';
 import { writePdpDebugLeanFromPayload } from './mlPdpDebugLean.js';
 import { writePdpLeanFromPayload } from './mlPdpLean.js';
+import { getPipelineSharedBrowser, isPipelineSharedBrowser } from './mlPipelineBrowser.js';
 import { pipelineShutdownRequested } from './mlPipelineQueue.js';
+import { warmPdpIdleTab } from './mlPdpIdleTabWarmup.js';
 import { scrapeMlPdp } from './mlPdpScrape.js';
 
 /** @typedef {{ product_id: string; url: string }} PipelineTask */
@@ -290,19 +292,41 @@ export async function runPipelineConsumer(state) {
     if (metricsPath) console.info(`[pipeline] métricas (${reason}): ${metricsPath}`);
   }
 
-  let { browser } = await launchBrowser();
+  /** Quando o `runPipeline.js` abre o Chrome antes, não fechar aqui (evita matar a listagem). */
+  let ownsPipelineBrowser = false;
+  /** @type {import('puppeteer').Browser} */
+  let browser;
+  const shared = getPipelineSharedBrowser();
+  if (shared?.connected) {
+    browser = shared;
+    console.info('[pipeline] consumidor PDP: reutiliza o browser partilhado (listagem + PDP na mesma instância Chrome)');
+  } else {
+    const launched = await launchBrowser();
+    browser = launched.browser;
+    ownsPipelineBrowser = true;
+  }
   /** @type {import('puppeteer').Page} */
   let page = await browser.newPage();
+  await warmPdpIdleTab(page, '[pipeline]');
   let itemsInSession = 0;
 
   async function recycleBrowser(reason) {
     browserRestartCount += 1;
     console.info(`[pipeline] reciclagem do browser (${reason})`);
     await page.close().catch(() => {});
+    if (isPipelineSharedBrowser(browser)) {
+      console.warn('[pipeline] browser partilhado: não fechar a instância; só nova página PDP.');
+      page = await browser.newPage();
+      await warmPdpIdleTab(page, '[pipeline]');
+      itemsInSession = 0;
+      return;
+    }
     await browser.close().catch(() => {});
     const launched = await launchBrowser();
     browser = launched.browser;
+    ownsPipelineBrowser = true;
     page = await browser.newPage();
+    await warmPdpIdleTab(page, '[pipeline]');
     itemsInSession = 0;
   }
 
@@ -311,6 +335,7 @@ export async function runPipelineConsumer(state) {
     console.warn(`[pipeline] nova página (${reason})`);
     await page.close().catch(() => {});
     page = await browser.newPage();
+    await warmPdpIdleTab(page, '[pipeline]');
     itemsInSession = 0;
   }
 
@@ -366,6 +391,7 @@ export async function runPipelineConsumer(state) {
             page,
             keepBrowserOpen: true,
             skipWarmup: itemsInSession > 0,
+            listing_product_id: pid,
           });
           lastMessage = '';
           break;
@@ -467,6 +493,6 @@ export async function runPipelineConsumer(state) {
     await flush(runStopReason === 'max_duration' ? 'limite_tempo' : 'pipeline_final', runStopReason === 'sigint');
   } finally {
     await page.close().catch(() => {});
-    await browser.close().catch(() => {});
+    if (ownsPipelineBrowser) await browser.close().catch(() => {});
   }
 }

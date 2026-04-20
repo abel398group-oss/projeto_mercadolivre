@@ -48,6 +48,7 @@ export function mapSearchItemToRecord(item, categoryId) {
 
   return {
     product_id,
+    listing_product_id: product_id,
     name: String(item.title || '').trim(),
     price_current: Number.isFinite(price) ? price : 0,
     price_currency: String(item.currency_id || 'BRL'),

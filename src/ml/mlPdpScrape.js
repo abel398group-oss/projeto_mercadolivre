@@ -97,7 +97,9 @@ function collectProductJsonLdInPage() {
  *   page?: import('puppeteer').Page;
  *   keepBrowserOpen?: boolean;
  *   skipWarmup?: boolean;
+ *   listing_product_id?: string;
  * } | undefined} [options]
+ * Opção `listing_product_id`: ID da descoberta no catálogo/fila (preservado no registo).
  * Opção `page`: quando passada (ex.: bulk), reutiliza a mesma aba; não fecha página nem browser no `finally`.
  * @returns {Promise<import('../productSchema.js').CanonicalProduct & { price_currency: string }>}
  */
@@ -131,6 +133,11 @@ export async function scrapeMlPdp(productUrl, options = {}) {
   const identity = parseIdentityFromUrl(productUrl);
   /** @type {import('../productSchema.js').CanonicalProduct} */
   let base = emptyProduct();
+
+  const listingDiscovery = s(options.listing_product_id);
+  if (listingDiscovery) {
+    base = mergeWithFieldSources(base, { listing_product_id: listingDiscovery }, 'catalog_discovery');
+  }
 
   const apiDelay = async () => {
     const d = Math.max(0, config.mlApiDelayMs);

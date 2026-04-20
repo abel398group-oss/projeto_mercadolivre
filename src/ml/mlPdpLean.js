@@ -22,7 +22,9 @@ export function buildPdpLean(product) {
   const lean = {};
 
   if (str(p.product_id)) lean.product_id = str(p.product_id);
+  if (str(p.listing_product_id)) lean.listing_product_id = str(p.listing_product_id);
   if (str(p.item_id)) lean.item_id = str(p.item_id);
+  if (str(p.canonical_id)) lean.canonical_id = str(p.canonical_id);
   if (str(p.variation_id)) lean.variation_id = str(p.variation_id);
   if (str(p.category_id)) lean.category_id = str(p.category_id);
   if (str(p.domain_id)) lean.domain_id = str(p.domain_id);
@@ -93,7 +95,11 @@ export function buildLeanPdpSnapshot(fullPayload) {
   for (const [k, rec] of Object.entries(items)) {
     leanItems[k] = buildPdpLean(rec);
   }
-  return { meta, items: leanItems };
+  return {
+    schema_version: 'pdp_lean_v1',
+    meta,
+    items: leanItems,
+  };
 }
 
 /**

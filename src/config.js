@@ -1,5 +1,9 @@
 import 'dotenv/config';
 
+/** Pasta de perfil Chrome por defeito (PDP, bulk, listagem quando não há override). */
+const defaultUserDataDir =
+  (process.env.USER_DATA_DIR && String(process.env.USER_DATA_DIR).trim()) || './chrome-profile';
+
 function boolEnv(name, defaultValue) {
   const v = process.env[name];
   if (v === undefined || v === '') return defaultValue;
@@ -32,7 +36,7 @@ export const config = {
   historyOutputRoot: (process.env.SAVE_HISTORY_ROOT && String(process.env.SAVE_HISTORY_ROOT).trim()) || './output/history',
 
   headless: boolEnv('HEADLESS', false),
-  userDataDir: process.env.USER_DATA_DIR || './chrome-profile',
+  userDataDir: defaultUserDataDir,
   /**
    * Chrome em modo anónimo (--incognito) + sem pasta de perfil persistente.
    * Útil quando o ML fica a pedir login em ciclo no mesmo USER_DATA_DIR.
@@ -274,17 +278,21 @@ export const config = {
    * Mais lento, mas útil quando o fetch “nu” é bloqueado.
    */
   mlListaBrowserOnBlock: boolEnv('ML_LISTA_BROWSER_ON_BLOCK', false),
+  /**
+   * Se o GET devolver interstitial de verificação / tráfego suspeito (comum sem cookies), tentar de seguida com Puppeteer
+   * antes de falhar. No pipeline, usa o browser partilhado (mesma sessão que o PDP).
+   */
+  mlListaFetchChallengeTryBrowser: boolEnv('ML_LISTA_FETCH_CHALLENGE_TRY_BROWSER', true),
 
   /**
-   * Perfil Chrome só para o crawl lista (evita “Target closed” se o PDP deixou Chrome aberto no mesmo USER_DATA_DIR).
-   * Por defeito: `{USER_DATA_DIR ou ./chrome-profile}-lista`. OneDrive a sincronizar a pasta do perfil também causa falhas.
+   * Perfil Chrome para o crawl lista (quando o fluxo abre Puppeteer).
+   * Por defeito é o **mesmo** que `userDataDir` — uma sessão, login manual numa só pasta antes do pipeline.
+   * Override: `ML_LISTA_USER_DATA_DIR` (ex.: perfil separado se precisares de evitar lock entre dois Chromes).
    */
   mlListaUserDataDir: (() => {
     const v = process.env.ML_LISTA_USER_DATA_DIR;
     if (v !== undefined && String(v).trim() !== '') return String(v).trim();
-    const main = process.env.USER_DATA_DIR || './chrome-profile';
-    const trimmed = main.replace(/[/\\]+$/, '');
-    return `${trimmed}-lista`;
+    return defaultUserDataDir;
   })(),
 
   /** Modo lista: atraso entre pedidos HTML (ms). */

@@ -6,7 +6,7 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15',
 ];
 
-/** Chrome/Win estável — mesmo “dispositivo” em todas as execuções (cookies/login do ML_LISTA_USER_DATA_DIR). */
+/** Chrome/Win estável — mesmo “dispositivo” em todas as execuções (cookies/login em USER_DATA_DIR / ML_LISTA_USER_DATA_DIR). */
 export const DEFAULT_CHROME_USER_AGENT = USER_AGENTS[0];
 
 export function pickRandomUserAgent() {

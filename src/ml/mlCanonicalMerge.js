@@ -176,6 +176,21 @@ export function mergeWithFieldSources(prev, incoming, sourceId) {
       continue;
     }
 
+    if (key === 'listing_product_id') {
+      const prevListing = String(base.listing_product_id || '').trim();
+      if (prevListing) continue;
+      if (isEmptyMergeValue(incVal)) continue;
+      const validated = validateFieldCandidate('listing_product_id', incVal, ctx);
+      if (!validated.ok) {
+        pushRejection(base, 'listing_product_id', src, incVal, validated.reason);
+        continue;
+      }
+      const norm = validated.normalized !== undefined ? validated.normalized : incVal;
+      base.listing_product_id = /** @type {string} */ (norm);
+      fs.listing_product_id = src;
+      continue;
+    }
+
     if (typeof incVal === 'object' && incVal !== null && !Array.isArray(incVal)) {
       if (!MERGE_OBJECT_KEYS.has(key)) {
         pushRejection(base, key, src, incVal, 'object_field_not_whitelisted');

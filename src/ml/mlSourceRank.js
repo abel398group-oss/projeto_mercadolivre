@@ -20,6 +20,8 @@ export const SOURCE_RANK = /** @type {const} */ ({
   heuristic: 22,
   regex_text: 15,
   category_ssr: 10,
+  /** Chave de descoberta no catálogo/fila (só preenche listing_product_id; não compete com PDP). */
+  catalog_discovery: 8,
   /** Legado mergeProduct */
   pdp: 35,
 });

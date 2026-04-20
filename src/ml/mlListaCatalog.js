@@ -16,6 +16,7 @@ import {
   isListaSuspiciousTrafficHtml,
 } from './mlListaHtmlExtract.js';
 import { writeCatalogLeanFile, writeCatalogLeanFileSync } from './mlCatalogLean.js';
+import { getPipelineSharedBrowser, isPipelineSharedBrowser } from './mlPipelineBrowser.js';
 import { notifyPipelineItemDiscovered, pipelineShutdownRequested } from './mlPipelineQueue.js';
 
 const LISTA_HOST = 'https://lista.mercadolivre.com.br';
@@ -37,6 +38,7 @@ function mapListaIdToRecord(mlbFromPath, categoryPath) {
     : `MLB${String(mlbFromPath).replace(/\D/g, '')}`;
   return {
     product_id: id,
+    listing_product_id: id,
     name: '',
     price_current: 0,
     price_currency: 'BRL',
@@ -120,10 +122,10 @@ async function closeListaBrowserInstance() {
     await listaPage.close().catch(() => {});
     listaPage = null;
   }
-  if (listaBrowser) {
+  if (listaBrowser && !isPipelineSharedBrowser(listaBrowser)) {
     await listaBrowser.close().catch(() => {});
-    listaBrowser = null;
   }
+  listaBrowser = null;
 }
 
 async function disposeListaBrowser() {
@@ -154,9 +156,17 @@ async function fetchListaHtmlResolved(url, ctx) {
           await closeListaBrowserInstance();
         }
         if (!listaBrowser) {
-          console.info(`[ml-lista] a abrir Chrome (perfil lista: ${config.mlListaUserDataDir}) — uma janela, mesma aba, vários URLs`);
-          const { browser } = await launchBrowser({ userDataDir: config.mlListaUserDataDir });
-          listaBrowser = browser;
+          const shared = getPipelineSharedBrowser();
+          if (shared && shared.connected) {
+            console.info('[ml-lista] a usar browser partilhado do pipeline (mesma sessão que o PDP; aba de listagem separada)');
+            listaBrowser = shared;
+          } else {
+            console.info(
+              `[ml-lista] a abrir Chrome (userDataDir=${path.resolve(process.cwd(), config.mlListaUserDataDir)}) — uma janela, mesma aba, vários URLs`
+            );
+            const { browser } = await launchBrowser({ userDataDir: config.mlListaUserDataDir });
+            listaBrowser = browser;
+          }
         }
         const browserRef = listaBrowser;
         if (!browserRef) throw new Error('browser indisponível');
@@ -206,6 +216,14 @@ async function fetchListaHtmlResolved(url, ctx) {
 
   const { html, finalUrl } = await fetchHtml(url);
   if (isMlAccountChallengePage({ url: finalUrl, html })) {
+    if (config.mlListaFetchChallengeTryBrowser) {
+      console.warn(
+        '[ml-lista] bloqueio/verificação no GET (sem cookies típicos de browser) — a repetir com Puppeteer e perfil. ' +
+          'No pipeline isto usa o mesmo Chrome que o PDP; faz login nessa janela se pedir.'
+      );
+      listaPreferBrowser = true;
+      return await viaBrowser();
+    }
     if (config.mlListaCloseBrowserOnAccountChallenge) await closeListaBrowserInstance();
     throw new Error(mlAccountVerificationErrorMessage('listagem'));
   }
@@ -220,7 +238,7 @@ async function fetchListaHtmlResolved(url, ctx) {
 
   console.warn(
     '[ml-lista] página de bloqueio no fetch — a usar browser no restante desta execução (ML_LISTA_BROWSER_ON_BLOCK). ' +
-      'Perfil: ML_LISTA_USER_DATA_DIR ou pasta *-lista (não uses o mesmo Chrome/PDP aberto nesse perfil).'
+      `Perfil (absoluto): ${path.resolve(process.cwd(), config.mlListaUserDataDir)} — por defeito igual a USER_DATA_DIR; evita dois Puppeteers no mesmo perfil em paralelo.`
   );
   listaPreferBrowser = true;
   return await viaBrowser();

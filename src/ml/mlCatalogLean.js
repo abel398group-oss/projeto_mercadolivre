@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { config } from '../config.js';
 import { writeSnapshot, writeSnapshotSync } from '../io/writeSnapshot.js';
+import { computeCanonicalProductId } from './mlProductFinalize.js';
 
 /** @param {unknown} v */
 function str(v) {
@@ -22,6 +23,11 @@ export function buildCatalogLean(product) {
   const lean = {};
 
   lean.product_id = str(p.product_id);
+  const lip = str(p.listing_product_id) || str(p.product_id);
+  if (lip) lean.listing_product_id = lip;
+  const canon = str(p.canonical_id) || computeCanonicalProductId(/** @type {Record<string, unknown>} */ (p));
+  if (canon) lean.canonical_id = canon;
+
   lean.name = str(p.name);
   lean.price_current = Number(p.price_current);
   if (!Number.isFinite(lean.price_current)) lean.price_current = 0;
@@ -75,7 +81,11 @@ export function buildLeanCatalogPayload(fullPayload) {
   for (const [k, rec] of Object.entries(items)) {
     leanItems[k] = buildCatalogLean(rec);
   }
-  return { meta, items: leanItems };
+  return {
+    schema_version: 'catalog_lean_v1',
+    meta,
+    items: leanItems,
+  };
 }
 
 /**

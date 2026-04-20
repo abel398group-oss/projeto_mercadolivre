@@ -8,8 +8,13 @@
 import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { launchBrowser, logChromePersistentProfileSummary } from './browser.js';
 import { config } from './config.js';
 import { runFullCatalog } from './ml/mlCatalogRun.js';
+import {
+  clearPipelineSharedBrowser,
+  setPipelineSharedBrowser,
+} from './ml/mlPipelineBrowser.js';
 import { runPipelineConsumer } from './ml/mlPipelineConsumer.js';
 
 process.env.ML_PIPELINE_ACTIVE = '1';
@@ -37,6 +42,19 @@ async function maybeTruncatePipelineFiles() {
 }
 
 await maybeTruncatePipelineFiles();
+logChromePersistentProfileSummary('[pipeline]');
+
+/** Um único Chrome para listagem + PDP (evita lock de perfil e permite sessão comum). */
+let pipelineBrowser = null;
+try {
+  console.info('[pipeline] a abrir Chrome partilhado (lista + consumidor PDP)…');
+  const launched = await launchBrowser();
+  pipelineBrowser = launched.browser;
+  setPipelineSharedBrowser(pipelineBrowser);
+} catch (e) {
+  console.error('[pipeline] falha ao abrir browser partilhado:', e instanceof Error ? e.message : e);
+  throw e;
+}
 
 process.on('SIGINT', () => {
   process.env.ML_PIPELINE_SHUTDOWN = '1';
@@ -61,7 +79,15 @@ const producerPromise = runFullCatalog()
     state.producerDone = true;
   });
 
-await Promise.all([producerPromise, consumerPromise]);
+try {
+  await Promise.all([producerPromise, consumerPromise]);
+} finally {
+  clearPipelineSharedBrowser();
+  if (pipelineBrowser) {
+    await pipelineBrowser.close().catch(() => {});
+    pipelineBrowser = null;
+  }
+}
 
 delete process.env.ML_PIPELINE_ACTIVE;
 delete process.env.ML_PIPELINE_SHUTDOWN;

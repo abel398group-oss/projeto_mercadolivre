@@ -344,6 +344,11 @@ export function validateFieldCandidate(field, value, ctx = {}) {
       if (!id) return { ok: false, reason: 'invalid_item_id' };
       return { ok: true, normalized: id };
     }
+    case 'listing_product_id': {
+      const id = normalizeItemId(value);
+      if (!id) return { ok: false, reason: 'invalid_listing_product_id' };
+      return { ok: true, normalized: id };
+    }
     case 'catalog_product_id': {
       if (!isValidCatalogProductId(value)) return { ok: false, reason: 'invalid_catalog_product_id' };
       return { ok: true, normalized: trimStr(value).toUpperCase() };

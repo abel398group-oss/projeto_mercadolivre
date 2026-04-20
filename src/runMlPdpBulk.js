@@ -23,7 +23,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { launchBrowser } from './browser.js';
+import { launchBrowser, logChromePersistentProfileSummary } from './browser.js';
 import { config } from './config.js';
 import { buildBulkMetricsSnapshot } from './io/bulkMetrics.js';
 import { writeSnapshot } from './io/writeSnapshot.js';
@@ -31,6 +31,7 @@ import { appendJsonlLine } from './io/jsonl.js';
 import { dedupePrimaryKey } from './ml/mlDedupe.js';
 import { resolveCatalogItemToPdpUrl } from './ml/mlExtract.js';
 import { writePdpDebugLeanFromPayload } from './ml/mlPdpDebugLean.js';
+import { warmPdpIdleTab } from './ml/mlPdpIdleTabWarmup.js';
 import { writePdpLeanFromPayload } from './ml/mlPdpLean.js';
 import { scrapeMlPdp } from './ml/mlPdpScrape.js';
 import { sleep } from './util.js';
@@ -261,6 +262,7 @@ async function main() {
     return;
   }
 
+  logChromePersistentProfileSummary('[ml-pdp-bulk]');
   console.info(`[ml-pdp-bulk] ${toRun.length} produto(s) — entrada: ${catalogPath}`);
   if (outPath) console.info(`[ml-pdp-bulk] saída (agregado): ${outPath}`);
   if (metricsPath) console.info(`[ml-pdp-bulk] métricas: ${metricsPath}`);
@@ -296,6 +298,7 @@ async function main() {
   browserForSignal = browser;
   /** @type {import('puppeteer').Page} */
   let page = await browser.newPage();
+  await warmPdpIdleTab(page, '[ml-pdp-bulk]');
   /** Produtos já scrapeados nesta “vida” do browser (warm-up só no primeiro de cada sessão). */
   let itemsInSession = 0;
 
@@ -309,6 +312,7 @@ async function main() {
     browser = launched.browser;
     browserForSignal = browser;
     page = await browser.newPage();
+    await warmPdpIdleTab(page, '[ml-pdp-bulk]');
     itemsInSession = 0;
   }
 
@@ -318,6 +322,7 @@ async function main() {
     await appendSessionLog({ event: 'page_recreate', reason, ...detail });
     await page.close().catch(() => {});
     page = await browser.newPage();
+    await warmPdpIdleTab(page, '[ml-pdp-bulk]');
     itemsInSession = 0;
   }
 
@@ -365,6 +370,7 @@ async function main() {
             page,
             keepBrowserOpen: true,
             skipWarmup: itemsInSession > 0,
+            listing_product_id: pid,
           });
           lastMessage = '';
           break;

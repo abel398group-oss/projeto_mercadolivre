@@ -124,7 +124,8 @@ function mergeProvenanceUnique(prevChain, incomingProv) {
  */
 function recordListingFieldSource(out, fieldKey, provenance) {
   const p = str(provenance);
-  if (!p || !isListingProvenance(provenance)) return;
+  if (!p) return;
+  if (!isListingProvenance(provenance) && p !== 'catalog_discovery') return;
   if (!out._field_sources || typeof out._field_sources !== 'object') out._field_sources = {};
   /** @type {Record<string, string>} */ (out._field_sources)[fieldKey] = p;
 }
@@ -307,8 +308,18 @@ function mergeRankPosition(prev, inc, prevChain, incomingProv) {
 /** @returns {import('./productSchema.js').CanonicalProduct} */
 export function emptyProduct() {
   return {
-    /** @deprecated Legado: usar item_id / catalog_product_id. Preenchido em finalize. */
+    /** @deprecated Legado: usar item_id / catalog_product_id / canonical_id. Preenchido em finalize. */
     product_id: '',
+    /**
+     * ID do anúncio tal como descoberto na listagem ou na fila (chave inicial).
+     * Não substituir pelo item_id do PDP — ver canonical_id.
+     */
+    listing_product_id: '',
+    /**
+     * ID oficial recomendado para downstream (item_id → catalog_product_id → listing_product_id → product_id legado).
+     * Preenchido em finalizeCollectionRecord.
+     */
+    canonical_id: '',
     /** Catálogo ML (URL /up/MLBU…). */
     catalog_product_id: '',
     /** Anúncio MLB (API items). */
@@ -427,6 +438,22 @@ export function mergeProduct(prev, incoming, provenance = '') {
       if (Array.isArray(incoming.categories)) {
         out.categories = mergeCategoriesField(out.categories, incoming.categories, prevChain, provenance);
         recordListingFieldSource(out, 'categories', provenance);
+      }
+      continue;
+    }
+    if (k === 'canonical_id') {
+      continue;
+    }
+    if (k === 'listing_product_id') {
+      if (incomingScalarEmpty(incoming.listing_product_id)) continue;
+      const v = validateFieldCandidate('listing_product_id', incoming.listing_product_id, validationCtx(out, provenance));
+      if (!v.ok) {
+        pushFieldRejection(out, 'listing_product_id', provenance, incoming.listing_product_id, v.reason);
+        continue;
+      }
+      if (!str(out.listing_product_id)) {
+        out.listing_product_id = /** @type {string} */ (v.normalized);
+        recordListingFieldSource(out, 'listing_product_id', provenance);
       }
       continue;
     }
