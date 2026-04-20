@@ -215,6 +215,7 @@ async function main() {
       debug_outputs: useAuxiliaryJsonl,
       items: itemsOut,
       errors,
+      source_meta: /** @type {Record<string, unknown>} */ (payload.meta),
     });
     const indent = config.mlBulkPretty ? 2 : 0;
     await writeSnapshot({

@@ -1,5 +1,13 @@
 /**
  * Métricas operacionais do bulk PDP (sem analytics comercial).
+ *
+ * O snapshot inclui:
+ * - **Campos raiz legados** (`processed_items`, `fields_filled`, …): compatibilidade com leitores existentes.
+ * - **Blocos agrupados** (`run_counts`, `storage_counts`, `discovery_counts`, `quality_counts`, `block_stats`):
+ *   visão operacional recomendada (mesmos dados, organizados).
+ *
+ * `source_meta`: opcionalmente o `meta` do payload agregado (ex.: `catalog.meta` no bulk) para preencher
+ * `discovery_counts` / parte de `block_stats` quando `meta.stats` existe (API ou lista).
  */
 
 /** @param {unknown} v */
@@ -20,6 +28,21 @@ function fieldFilled(p, key) {
     if (t === 'unknown' || t === '') return false;
   }
   return true;
+}
+
+/** @param {unknown} stats */
+function statsRecord(stats) {
+  return stats && typeof stats === 'object' && !Array.isArray(stats) ? /** @type {Record<string, unknown>} */ (stats) : null;
+}
+
+/**
+ * @param {Record<string, unknown> | null} stats
+ * @param {string} key
+ */
+function statNumberOrNull(stats, key) {
+  if (!stats) return null;
+  const v = stats[key];
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
 /** @param {string} msg */
@@ -54,10 +77,16 @@ export function classifyBulkError(msg) {
  *   debug_outputs: boolean;
  *   items: Record<string, Record<string, unknown>>;
  *   errors: { product_id: string; url: string; message: string }[];
+ *   source_meta?: Record<string, unknown> | null;
+ *   new_discovered_this_run?: number | null;
  * }} args
  */
 export function buildBulkMetricsSnapshot(args) {
   const items = Object.values(args.items || {});
+  const metaTop = args.source_meta && typeof args.source_meta === 'object' && !Array.isArray(args.source_meta)
+    ? /** @type {Record<string, unknown>} */ (args.source_meta)
+    : null;
+  const st = statsRecord(metaTop?.stats);
 
   /** @type {Record<string, number>} */
   const errors_by_type = {};
@@ -142,12 +171,63 @@ export function buildBulkMetricsSnapshot(args) {
         ? 'sigint'
         : 'complete';
 
+  const listaAccount = st ? statNumberOrNull(st, 'lista_account_verification') ?? 0 : 0;
+  const errAccount = errors_by_type.account_verification ?? 0;
+  const listaFallback = st ? statNumberOrNull(st, 'lista_browser_fallbacks') ?? 0 : 0;
+  const listaBlocked = st ? statNumberOrNull(st, 'lista_blocked_pages') ?? 0 : 0;
+
+  const newDiscovered =
+    args.new_discovered_this_run != null && typeof args.new_discovered_this_run === 'number' && Number.isFinite(args.new_discovered_this_run)
+      ? args.new_discovered_this_run
+      : null;
+
   return {
+    metrics_note:
+      'Campos no nível raiz (processed_items, fields_filled, …) mantêm compatibilidade. Para operação e diagnóstico, preferir run_counts, storage_counts, discovery_counts, quality_counts e block_stats.',
+
     run_type: 'bulk_pdp',
     run_started_at: args.run_started_at,
     run_finished_at: args.run_finished_at,
     duration_seconds: args.duration_seconds,
     run_stopped_reason,
+
+    run_counts: {
+      processed_this_run: args.processed_items,
+      success_this_run: args.success_items,
+      failed_this_run: args.failed_items,
+    },
+    storage_counts: {
+      stored_total: args.unique_items_stored,
+      valid_total: valid_items,
+      invalid_total: invalid_items,
+      duplicate_total: args.duplicate_items,
+    },
+    discovery_counts: {
+      categories_total: statNumberOrNull(st, 'categories_total'),
+      categories_done: statNumberOrNull(st, 'categories_done'),
+      catalog_items_total: statNumberOrNull(st, 'items_unique'),
+      new_discovered_this_run: newDiscovered,
+    },
+    quality_counts: {
+      with_item_id: fields_filled.item_id,
+      with_seller_id: fields_filled.seller_id,
+      with_name: fields_filled.name,
+      with_price_current: fields_filled.price_current,
+      with_rating: fields_filled.rating,
+      with_rating_count: fields_filled.rating_count,
+      with_shipping: fields_filled.shipping,
+      with_images: fields_filled.images,
+      with_image_main: fields_filled.image_main,
+      with_description: fields_filled.description,
+      with_category_id: fields_filled.category_id,
+      with_domain_id: fields_filled.domain_id,
+    },
+    block_stats: {
+      account_verification_count: errAccount + listaAccount,
+      browser_fallback_count: listaFallback,
+      blocked_pages_count: listaBlocked,
+    },
+
     total_input_items: args.total_input_items,
     processed_items: args.processed_items,
     success_items: args.success_items,

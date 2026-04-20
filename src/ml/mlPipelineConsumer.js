@@ -283,6 +283,7 @@ export async function runPipelineConsumer(state) {
       debug_outputs: false,
       items: itemsOut,
       errors,
+      source_meta: /** @type {Record<string, unknown>} */ (payload.meta),
     });
     const indent = config.mlBulkPretty ? 2 : 0;
     await writeSnapshot({
