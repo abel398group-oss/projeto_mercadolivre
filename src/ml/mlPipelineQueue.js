@@ -1,5 +1,6 @@
 /**
- * Fila persistente do pipeline (descoberta → PDP). Sem analytics.
+ * Fila persistente do pipeline (descoberta → PDP): **fonte operacional** em JSONL (`ML_PIPELINE_DISCOVERED_JSONL`).
+ * O catálogo agregado (`catalogo_ml.json`) é snapshot derivado; a fila de descoberta é o registo incremental para o consumidor.
  */
 
 import { appendJsonlLine } from '../io/jsonl.js';

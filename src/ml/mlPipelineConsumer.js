@@ -1,7 +1,8 @@
 /**
  * Consumidor PDP do pipeline: **fonte operacional** = `pipeline_discovered.jsonl` (tail) + `pipeline_processed.jsonl`
  * (estado de itens já tratados) + ficheiro de offset. **Snapshots derivados** = `pdp_all.json`, lean, debug lean, métricas.
- * Arranque sem `pdp_all.json` pré-existente é suportado: o estado “já processado” vem do JSONL; o agregado repovoa-se nos flushes.
+ * Arranque sem `pdp_all.json` pré-existente é suportado: o que foi “já processado” vem do JSONL (não re-enfileira).
+ * Corpos PDP de execuções anteriores não estão no JSONL processado — só num snapshot `pdp_all.json` legível ou novos scrapes nesta corrida.
  */
 
 import fs from 'node:fs/promises';
@@ -163,7 +164,17 @@ export async function runPipelineConsumer(state) {
         processedSuccess.add(k);
       }
     } catch {
-      /* novo */
+      const exists = await fs
+        .stat(outPath)
+        .then(() => true)
+        .catch(() => false);
+      if (exists) {
+        console.warn(
+          `[pipeline] snapshot PDP ilegível ou vazio (${outPath}) — a continuar só com JSONL operacional + fila.`
+        );
+      } else {
+        console.info(`[pipeline] sem snapshot PDP prévio (${outPath}) — estado a partir de ${processedPath} + descobertos.`);
+      }
     }
   }
 

@@ -1,8 +1,16 @@
 /**
  * Pipeline paralelo: descoberta (catálogo) + PDP em simultâneo.
- * Fila: ML_PIPELINE_DISCOVERED_JSONL (JSONL). Estado: ML_PIPELINE_PROCESSED_JSONL, offset em ML_PIPELINE_OFFSET_FILE.
  *
- * Variáveis úteis: ML_PIPELINE_FRESH=true (limpa fila no arranque), ML_BULK_MAX_DURATION_MS, ML_BULK_FLUSH_EVERY, etc.
+ * **Fonte operacional (append-only / tail):**
+ * - `ML_PIPELINE_DISCOVERED_JSONL` → fila de itens descobertos (ex.: `./output/pipeline_discovered.jsonl`)
+ * - `ML_PIPELINE_PROCESSED_JSONL` → registo de PDP processados (ex.: `./output/pipeline_processed.jsonl`)
+ * - `ML_PIPELINE_OFFSET_FILE` → offset do tail no discovered
+ *
+ * **Snapshots derivados (JSON agregado / export):** `catalogo_ml.json`, `catalogo_ml_lean.json`, `pdp_all.json`,
+ * `pdp_all_lean.json`, `pdp_debug_lean.json`, `metrics.json` — gerados a partir do estado em memória + flush;
+ * não substituem a fila JSONL para retoma operacional.
+ *
+ * Variáveis úteis: ML_PIPELINE_FRESH=true (limpa só fila JSONL + offset no arranque), ML_BULK_MAX_DURATION_MS, ML_BULK_FLUSH_EVERY, etc.
  */
 
 import 'dotenv/config';

@@ -259,7 +259,8 @@ export const config = {
     './output/duplicate_products.jsonl',
 
   /**
-   * Pipeline paralelo (`npm run pipeline`): fila JSONL de descoberta + registo de PDP processados.
+   * Pipeline (`npm run pipeline`): **operacional** = JSONL de descoberta + processados + offset.
+   * JSON agregados (`catalogo_ml.json`, `pdp_all.json`, …) são snapshots derivados, não a fila de verdade.
    */
   mlPipelineDiscoveredJsonl:
     (process.env.ML_PIPELINE_DISCOVERED_JSONL && String(process.env.ML_PIPELINE_DISCOVERED_JSONL).trim()) ||

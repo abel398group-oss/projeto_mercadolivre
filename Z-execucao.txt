@@ -21,7 +21,9 @@ COMANDOS MAIS USADOS
 ##  >>>  1) PRINCIPAL — npm run pipeline  <<<                                 ##
 ##                                                                            ##
 ##      Modo paralelo: vai descobrindo produtos e já vai fazendo PDP à        ##
-##      medida que aparecem (fila em ficheiros .jsonl em output/).            ##
+##      medida que aparecem. Fonte operacional: pipeline_*.jsonl (fila +       ##
+##      processados); catalogo_ml.json / pdp_all.json são snapshots          ##
+##      derivados (export), não substituem os JSONL para retoma.             ##
 ##                                                                            ##
 ##      Comando:  npm run pipeline                                            ##
 ##                                                                            ##
@@ -65,16 +67,24 @@ COMANDOS MAIS USADOS
    - O que faz: teste de UM produto (PDP único), útil para depuração.
 
 
-FICHEIROS "LATEST" (sempre os mais recentes)
----------------------------------------------
+PIPELINE — FICHEIROS OPERACIONAIS (JSONL, fila / estado)
+--------------------------------------------------------
+  output/pipeline_discovered.jsonl   (descobertos → consumidor PDP)
+  output/pipeline_processed.jsonl    (registo por item processado)
+  (+ offset em pipeline_consumer.offset)
+
+FICHEIROS "LATEST" — SNAPSHOTS / EXPORT DERIVADOS (.json)
+---------------------------------------------------------
   output/catalogo_ml.json
   output/catalogo_ml_lean.json
   output/pdp_all.json
   output/pdp_all_lean.json
   output/pdp_debug_lean.json
   output/metrics.json
+  output/run_manifest.json             (resumo da execução; vê operational_sources vs derived_outputs)
 
-Cada nova execução que grave estes caminhos SUBSTITUI o ficheiro anterior.
+Cada nova execução que grave estes caminhos SUBSTITUI o ficheiro anterior
+(nos derivados). Os JSONL são em geral append (ou truncados com ML_PIPELINE_FRESH).
 
 
 HISTÓRICO OPCIONAL (cópias com data e hora)
