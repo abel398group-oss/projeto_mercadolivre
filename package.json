@@ -16,6 +16,7 @@
     "ml:pdp:lean": "node src/runMlPdpLeanExport.js",
     "ml:pdp:debug": "node src/runMlPdpDebugExport.js",
     "test:embedded": "node src/ml/mlEmbeddedStateExtract.spec.js",
+    "test:fixtures": "node test/scraper.fixtures.spec.js",
     "analyze": "node src/runMlAnalyze.js",
     "ml:analyze": "node src/runMlAnalyze.js"
   },
