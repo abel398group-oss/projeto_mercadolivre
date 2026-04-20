@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { config } from '../config.js';
 import { writeSnapshot, writeSnapshotSync } from '../io/writeSnapshot.js';
+import { LEAN_SCHEMA_DEBUG } from './leanSchemaVersions.js';
 
 /** @param {unknown} v */
 function str(v) {
@@ -145,7 +146,7 @@ export function buildPdpDebugLeanSnapshot(fullPayload) {
     outItems[k] = buildDebugLeanItem(rec);
   }
   return {
-    schema_version: 'pdp_debug_lean_v1',
+    schema_version: LEAN_SCHEMA_DEBUG,
     meta,
     items: outItems,
   };

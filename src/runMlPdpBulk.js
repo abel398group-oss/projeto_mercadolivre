@@ -26,6 +26,7 @@ import path from 'node:path';
 import { launchBrowser, logChromePersistentProfileSummary } from './browser.js';
 import { config } from './config.js';
 import { buildBulkMetricsSnapshot } from './io/bulkMetrics.js';
+import { writeRunManifest } from './io/runManifest.js';
 import { writeSnapshot } from './io/writeSnapshot.js';
 import { appendJsonlLine } from './io/jsonl.js';
 import { dedupePrimaryKey } from './ml/mlDedupe.js';
@@ -248,7 +249,7 @@ async function main() {
     runStopReason = 'sigint';
     console.info('\n[ml-pdp-bulk] interrompido — a gravar…');
     await browserForSignal?.close().catch(() => {});
-    await flush('SIGINT', true).catch((e) => console.error(e));
+    await flush('SIGINT', true, true).catch((e) => console.error(e));
     process.exit(130);
   };
   process.on('SIGINT', () => {
@@ -257,7 +258,7 @@ async function main() {
 
   if (toRun.length === 0) {
     console.warn('[ml-pdp-bulk] Nenhum item com URL resolvível. Verifica o catálogo.');
-    await flush('vazio');
+    await flush('vazio', false, true);
     process.exit(0);
     return;
   }
@@ -489,7 +490,7 @@ async function main() {
     payload.meta.bulk_remaining_in_queue = Math.max(0, toRun.length - processedCount);
 
     const finalFlushReason = runStopReason === 'max_duration' ? 'limite_tempo' : 'final';
-    await flush(finalFlushReason, false);
+    await flush(finalFlushReason, false, true);
     if (runStopReason === 'max_duration') {
       console.info(
         `[ml-pdp-bulk] parado por tempo: ${Object.keys(itemsOut).length} únicos gravados, ${errors.length} erro(s), ${payload.meta.bulk_remaining_in_queue} item(ns) por processar na fila.`

@@ -232,6 +232,14 @@ export const config = {
     return (v && String(v).trim()) || './output/metrics.json';
   })(),
   /**
+   * Resumo da execução (pipeline / bulk PDP). Desliga: ML_RUN_MANIFEST_OUTPUT=- ou none
+   */
+  mlRunManifestOutput: (() => {
+    const v = process.env.ML_RUN_MANIFEST_OUTPUT;
+    if (v === '-' || String(v || '').toLowerCase() === 'none') return '';
+    return (v && String(v).trim()) || './output/run_manifest.json';
+  })(),
+  /**
    * JSONL auxiliares (discovered/enriched/invalid/duplicate). Por defeito desligado.
    * Liga com ML_DEBUG_OUTPUTS=true ou ML_BULK_JSONL=true (compatibilidade).
    */

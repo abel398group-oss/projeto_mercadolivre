@@ -1,5 +1,7 @@
 /**
- * Consumidor PDP do pipeline: lê pipeline_discovered.jsonl incrementalmente e grava pdp_all + métricas.
+ * Consumidor PDP do pipeline: **fonte operacional** = `pipeline_discovered.jsonl` (tail) + `pipeline_processed.jsonl`
+ * (estado de itens já tratados) + ficheiro de offset. **Snapshots derivados** = `pdp_all.json`, lean, debug lean, métricas.
+ * Arranque sem `pdp_all.json` pré-existente é suportado: o estado “já processado” vem do JSONL; o agregado repovoa-se nos flushes.
  */
 
 import fs from 'node:fs/promises';
@@ -7,6 +9,7 @@ import path from 'node:path';
 import { launchBrowser } from '../browser.js';
 import { config } from '../config.js';
 import { buildBulkMetricsSnapshot } from '../io/bulkMetrics.js';
+import { writeRunManifest } from '../io/runManifest.js';
 import { writeSnapshot } from '../io/writeSnapshot.js';
 import { appendJsonlLine } from '../io/jsonl.js';
 import { sleep } from '../util.js';
@@ -278,7 +281,7 @@ export async function runPipelineConsumer(state) {
     });
   }
 
-  async function flush(reason, interruptedRun = false) {
+  async function flush(reason, interruptedRun = false, withRunManifest = false) {
     payload.meta.bulk_stop_reason = runStopReason;
     await writeOutput();
     if (outPath) console.info(`[pipeline] gravado (${reason}): ${outPath}`);
@@ -290,6 +293,13 @@ export async function runPipelineConsumer(state) {
     );
     await writeMetrics(reason, interruptedRun);
     if (metricsPath) console.info(`[pipeline] métricas (${reason}): ${metricsPath}`);
+    if (withRunManifest) {
+      await writeRunManifest({
+        run_type: 'pipeline',
+        run_started_at: runStartedAtIso,
+        run_started_ms: runStartedMs,
+      }).catch((e) => console.error('[run-manifest]', e instanceof Error ? e.message : e));
+    }
   }
 
   /** Quando o `runPipeline.js` abre o Chrome antes, não fechar aqui (evita matar a listagem). */
@@ -490,7 +500,11 @@ export async function runPipelineConsumer(state) {
     payload.meta.bulk_errors_count = errors.length;
     payload.meta.bulk_duplicates_skipped = duplicateCount;
     payload.meta.bulk_processed_in_run = processedCount;
-    await flush(runStopReason === 'max_duration' ? 'limite_tempo' : 'pipeline_final', runStopReason === 'sigint');
+    await flush(
+      runStopReason === 'max_duration' ? 'limite_tempo' : 'pipeline_final',
+      runStopReason === 'sigint',
+      true
+    );
   } finally {
     await page.close().catch(() => {});
     if (ownsPipelineBrowser) await browser.close().catch(() => {});

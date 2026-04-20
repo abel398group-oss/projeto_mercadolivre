@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { config } from '../config.js';
 import { writeSnapshot, writeSnapshotSync } from '../io/writeSnapshot.js';
+import { LEAN_SCHEMA_CATALOG } from './leanSchemaVersions.js';
 import { computeCanonicalProductId } from './mlProductFinalize.js';
 
 /** @param {unknown} v */
@@ -82,7 +83,7 @@ export function buildLeanCatalogPayload(fullPayload) {
     leanItems[k] = buildCatalogLean(rec);
   }
   return {
-    schema_version: 'catalog_lean_v1',
+    schema_version: LEAN_SCHEMA_CATALOG,
     meta,
     items: leanItems,
   };
