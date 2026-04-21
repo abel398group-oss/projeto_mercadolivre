@@ -265,6 +265,7 @@ export async function runPipelineConsumer(state) {
     if (!metricsPath) return;
     const finishedIso = new Date().toISOString();
     const duration_seconds = Math.max(0, Math.round((Date.now() - runStartedMs) / 1000));
+    /* total_input_items: legado — |itemsOut|+fila+processed (dupla contagem de sucessos). Ver work_counts / snapshot_counts. */
     const snap = buildBulkMetricsSnapshot({
       run_started_at: runStartedAtIso,
       run_finished_at: finishedIso,
@@ -284,6 +285,7 @@ export async function runPipelineConsumer(state) {
       items: itemsOut,
       errors,
       source_meta: /** @type {Record<string, unknown>} */ (payload.meta),
+      work_units_pending: queue.length,
     });
     const indent = config.mlBulkPretty ? 2 : 0;
     await writeSnapshot({

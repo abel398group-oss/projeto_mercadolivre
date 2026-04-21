@@ -216,6 +216,7 @@ async function main() {
       items: itemsOut,
       errors,
       source_meta: /** @type {Record<string, unknown>} */ (payload.meta),
+      work_units_pending: Math.max(0, toRun.length - processedCount),
     });
     const indent = config.mlBulkPretty ? 2 : 0;
     await writeSnapshot({

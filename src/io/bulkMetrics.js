@@ -5,9 +5,19 @@
  * - **Campos raiz legados** (`processed_items`, `fields_filled`, …): compatibilidade com leitores existentes.
  * - **Blocos agrupados** (`run_counts`, `storage_counts`, `discovery_counts`, `quality_counts`, `block_stats`):
  *   visão operacional recomendada (mesmos dados, organizados).
+ * - **`work_counts` + `snapshot_counts`**: carga de trabalho da sessão vs tamanho do agregado em memória — **não misturar** com `total_input_items` no pipeline.
+ *
+ * **`total_input_items` — semântica por fluxo:**
+ * - **Bulk** (`runMlPdpBulk`): `toRun.length` = tamanho do lote desta execução (coerente).
+ * - **Pipeline** (`mlPipelineConsumer`): valor **legado** mantido por compatibilidade:
+ *   `|itemsOut| + queue.length + processedCount`. Essa soma mistura tamanho do snapshot com tentativas da corrida e
+ *   **conta cada sucesso duas vezes** (em `itemsOut` e de novo em `processedCount`). **Não usar** para leitura operacional
+ *   no pipeline — usar `work_counts` e `snapshot_counts`.
  *
  * `source_meta`: opcionalmente o `meta` do payload agregado (ex.: `catalog.meta` no bulk) para preencher
  * `discovery_counts` / parte de `block_stats` quando `meta.stats` existe (API ou lista).
+ *
+ * `work_units_pending`: fila ainda não processada nesta sessão (obrigatório no pipeline; bulk passa `toRun.length - processedCount`).
  */
 
 /** @param {unknown} v */
@@ -79,6 +89,7 @@ export function classifyBulkError(msg) {
  *   errors: { product_id: string; url: string; message: string }[];
  *   source_meta?: Record<string, unknown> | null;
  *   new_discovered_this_run?: number | null;
+ *   work_units_pending?: number;
  * }} args
  */
 export function buildBulkMetricsSnapshot(args) {
@@ -87,6 +98,16 @@ export function buildBulkMetricsSnapshot(args) {
     ? /** @type {Record<string, unknown>} */ (args.source_meta)
     : null;
   const st = statsRecord(metaTop?.stats);
+  const pipelineMode = Boolean(metaTop?.pipeline === true);
+
+  const workPendingRaw = args.work_units_pending;
+  const workPending =
+    typeof workPendingRaw === 'number' && Number.isFinite(workPendingRaw)
+      ? Math.max(0, workPendingRaw)
+      : Math.max(0, args.total_input_items - args.processed_items);
+
+  const snapshotItemsTotal = Object.keys(args.items || {}).length;
+  const workUnitsTotal = args.processed_items + workPending;
 
   /** @type {Record<string, number>} */
   const errors_by_type = {};
@@ -183,7 +204,7 @@ export function buildBulkMetricsSnapshot(args) {
 
   return {
     metrics_note:
-      'Campos no nível raiz (processed_items, fields_filled, …) mantêm compatibilidade. Para operação e diagnóstico, preferir run_counts, storage_counts, discovery_counts, quality_counts e block_stats.',
+      'Campos no nível raiz (processed_items, fields_filled, …) mantêm compatibilidade. Para operação: run_counts, storage_counts, work_counts, snapshot_counts, discovery_counts, quality_counts, block_stats. No pipeline, ignorar total_input_items para “tamanho de trabalho” — ver input_total_readme.',
 
     run_type: 'bulk_pdp',
     run_started_at: args.run_started_at,
@@ -227,6 +248,19 @@ export function buildBulkMetricsSnapshot(args) {
       browser_fallback_count: listaFallback,
       blocked_pages_count: listaBlocked,
     },
+
+    work_counts: {
+      work_units_total: workUnitsTotal,
+      work_units_processed: args.processed_items,
+      work_units_pending: workPending,
+    },
+    snapshot_counts: {
+      snapshot_items_total: snapshotItemsTotal,
+    },
+
+    input_total_readme: pipelineMode
+      ? 'Pipeline: total_input_items é legado (|itemsOut|+fila+processed neste flush) e dupla-conta sucessos. Use work_counts + snapshot_counts.'
+      : 'Bulk: total_input_items = toRun.length (lote). work_counts.reflete processado + pendente neste flush.',
 
     total_input_items: args.total_input_items,
     processed_items: args.processed_items,
